@@ -1,4 +1,4 @@
-# Copyright 2009-2010 10gen, Inc.
+# Copyright 2010-2010 10gen, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -453,6 +453,29 @@ class MongoHandler:
         result = conn[db][collection].remove(criteria)
 
         self.__safety_check(args, out, conn[db])
+
+    def _aggregate(self, args, out, name = None, db = None, collection = None):
+        if type(args).__name__ != 'dict':
+            out('{"ok" : 0, "errmsg" : "_aggregate must be a GET request"}')
+            return
+
+        conn = self._get_connection(name)
+        if conn == None:
+            out('{"ok" : 0, "errmsg" : "couldn\'t get connection to mongo"}')
+            return
+
+        if db == None or collection == None:
+            out('{"ok" : 0, "errmsg" : "db and collection must be defined"}')
+            return
+
+        pipeline = {}
+        if "pipeline" in args:
+            pipeline = self._get_son(args['pipeline'][0], out)
+            if pipeline == None:
+                return
+
+        result = conn[db][collection].aggregate(pipeline)
+        out(json.dumps(result, default=json_util.default))
 
     def _batch(self, args, out, name = None, db = None, collection = None):
         """
